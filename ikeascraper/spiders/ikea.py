@@ -1,0 +1,43 @@
+import scrapy
+
+
+def extract_image_link(sources: str, image_size: str):
+    links = map(
+        lambda l: l.split(" ")[0],  # Remove end of the string, after the actual link
+        filter(
+            lambda s: s.startswith(
+                "https://"
+            ),  # Filter on whether the string starts as an http address
+            map(
+                lambda s: s.strip(), sources.split("\n")
+            ),  # Split items, then remove all leading/ending spaces
+        ),
+    )
+    return next(filter(lambda l: l.endswith(image_size), links))
+
+
+class IkeaProduct(scrapy.Spider):
+    name = "products"
+    start_urls = [
+        "https://www.ikea.com/fr/fr/p/skoenabaeck-canape-2-places-convertible-knisa-gris-fonce-70582542/"
+    ]
+
+    def parse(self, response, **kwargs):
+        split_url = response.url.split("/")
+        if "p" in split_url:  # Product page
+            product_name = split_url[
+                split_url.index("p") + 1
+            ]  # Product name is directly after /p/ in the URL
+
+            # Retrieve image on the page product
+            element = response.xpath(
+                "/html/body/main/div/div[1]/div/div[2]/div[1]/div/div[3]/div/div[1]/div/span/img"
+            )
+            yield {
+                "product_name": product_name,
+                "description": element.attrib["alt"],
+                "image_link": extract_image_link(element.attrib["srcset"], "xl"),
+            }
+        else:
+            self.logger.warning(f"Expected to find 'p' in URL!")
+            raise NotImplementedError
