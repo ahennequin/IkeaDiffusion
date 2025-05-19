@@ -19,6 +19,7 @@ def extract_image_link(sources: str, image_size: str):
 
 @dataclass
 class IkeaProduct:
+    url_id: str
     product_name: str
     description: str
     image_link: str
@@ -27,13 +28,14 @@ class IkeaProduct:
 class IkeaWebsiteSpider(scrapy.Spider):
     name = "products"
     start_urls = [
-        "https://www.ikea.com/fr/fr/p/skoenabaeck-canape-2-places-convertible-knisa-gris-fonce-70582542/"
+        "https://www.ikea.com/fr/fr/p/skoenabaeck-canape-2-places-convertible-knisa-gris-fonce-70582542/",
+        "https://www.ikea.com/fr/fr/p/vesteroey-matelas-a-ressorts-ensaches-mi-ferme-bleu-clair-00450615/",
     ]
 
     def parse(self, response, **kwargs):
         split_url = response.url.split("/")
         if "p" in split_url:  # Product page
-            product_name = split_url[
+            url_id = split_url[
                 split_url.index("p") + 1
             ]  # Product name is directly after /p/ in the URL
 
@@ -42,7 +44,10 @@ class IkeaWebsiteSpider(scrapy.Spider):
                 "/html/body/main/div/div[1]/div/div[2]/div[1]/div/div[3]/div/div[1]/div/span/img"
             )
             yield IkeaProduct(
-                product_name=product_name,
+                url_id=url_id,
+                product_name=element.attrib["alt"].split(" ")[
+                    0
+                ],  # Product name is the first word of the description
                 description=element.attrib["alt"],
                 image_link=extract_image_link(element.attrib["srcset"], "xl"),
             )
