@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import scrapy
+from scrapy.linkextractors import LinkExtractor
 
 
 def extract_image_link(sources: str, image_size: str):
@@ -28,11 +29,17 @@ class IkeaProduct:
 class IkeaWebsiteSpider(scrapy.Spider):
     name = "products"
     start_urls = [
-        "https://www.ikea.com/fr/fr/p/skoenabaeck-canape-2-places-convertible-knisa-gris-fonce-70582542/",
-        "https://www.ikea.com/fr/fr/p/vesteroey-matelas-a-ressorts-ensaches-mi-ferme-bleu-clair-00450615/",
+        "https://www.ikea.com/fr/fr/",
     ]
 
     def parse(self, response, **kwargs):
+        # Parse all links on the page with the extractor that respect the given regex
+        link_extractor = LinkExtractor(allow=["\/p\/", "\/cat\/"])
+        # Parse all correct URLs
+        for link in link_extractor.extract_links(response):
+            yield scrapy.Request(link.url, callback=self.parse)
+
+        # Parse the current page, and try and yield the Item IkeaProduct
         split_url = response.url.split("/")
         if "p" in split_url:  # Product page
             url_id = split_url[
@@ -51,6 +58,3 @@ class IkeaWebsiteSpider(scrapy.Spider):
                 description=element.attrib["alt"],
                 image_link=extract_image_link(element.attrib["srcset"], "xl"),
             )
-        else:
-            self.logger.warning(f"Expected to find 'p' in URL!")
-            raise NotImplementedError
