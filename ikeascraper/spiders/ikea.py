@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import scrapy
 
 
@@ -16,7 +17,14 @@ def extract_image_link(sources: str, image_size: str):
     return next(filter(lambda l: l.endswith(image_size), links))
 
 
-class IkeaProduct(scrapy.Spider):
+@dataclass
+class IkeaProduct:
+    product_name: str
+    description: str
+    image_link: str
+
+
+class IkeaWebsiteSpider(scrapy.Spider):
     name = "products"
     start_urls = [
         "https://www.ikea.com/fr/fr/p/skoenabaeck-canape-2-places-convertible-knisa-gris-fonce-70582542/"
@@ -33,11 +41,11 @@ class IkeaProduct(scrapy.Spider):
             element = response.xpath(
                 "/html/body/main/div/div[1]/div/div[2]/div[1]/div/div[3]/div/div[1]/div/span/img"
             )
-            yield {
-                "product_name": product_name,
-                "description": element.attrib["alt"],
-                "image_link": extract_image_link(element.attrib["srcset"], "xl"),
-            }
+            yield IkeaProduct(
+                product_name=product_name,
+                description=element.attrib["alt"],
+                image_link=extract_image_link(element.attrib["srcset"], "xl"),
+            )
         else:
             self.logger.warning(f"Expected to find 'p' in URL!")
             raise NotImplementedError
