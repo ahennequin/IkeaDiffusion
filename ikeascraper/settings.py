@@ -63,8 +63,7 @@ ROBOTSTXT_OBEY = True
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    #    "ikeascraper.pipelines.IkeascraperPipeline": 300,
-    "scrapy.pipelines.images.ImagesPipeline": 1
+    "ikeascraper.pipelines.IkeascraperPipeline": 1,
 }
 
 IMAGES_STORE = "~/Code/IkeaDiffusion/parsed_data"
