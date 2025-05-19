@@ -14,7 +14,7 @@ EXPORTED_DATA_LOC = "scrapped_data.csv"
 
 
 class IkeascraperPipeline:
-    """This pipeline deletes duplicates products. Products are deemed duplicates if they both have the same 'url_id' and 'image_link'."""
+    """This pipeline deletes duplicates products. Products are deemed duplicates if they both have the same 'product_name' and 'image_link'."""
 
     item_dict = defaultdict(list)
 
@@ -32,7 +32,7 @@ class IkeascraperPipeline:
     def process_item(self, item, spider):
         # Wrap adapter around item, and retrieve needed information
         adapter = ItemAdapter(item)
-        name = adapter.get("url_id")
+        name = adapter.get("product_name")
         link = adapter.get("image_link")
         # If the 'product_name' appears in the dict
         if name in self.item_dict.keys():
