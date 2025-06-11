@@ -9,10 +9,16 @@ from tqdm import tqdm
 
 class IkeaDataset(Dataset):
 
-    def __init__(self, filepath: str, dataset_loc: str):
+    def __init__(
+        self,
+        filepath: str,
+        dataset_loc: str,
+        train_data_ratio: float = 0.8,
+    ):
         super().__init__()
         self.filepath = filepath
         self.dataset_loc = dataset_loc
+        self.train_data_ratio = train_data_ratio
         # Integrate tqdm callbacks with pandas
         tqdm.pandas()
 
@@ -39,7 +45,8 @@ class IkeaDataset(Dataset):
         split_df = (
             data_df.groupby("product_name")
             .apply(
-                lambda g: "train" if random() < 0.8 else "test", include_groups=False
+                lambda g: "train" if random() < self.train_data_ratio else "test",
+                include_groups=False,
             )
             .rename("split")
         ).reset_index()
