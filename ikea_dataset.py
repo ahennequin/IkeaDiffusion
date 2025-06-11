@@ -25,7 +25,9 @@ class IkeaDataset(Dataset):
 
     def resolve_image_path(self, row: pd.Series) -> Path:
         return Path(
-            self.dataset_loc, row.split, f"{row.product_name}_{row.id}.jpg"
+            self.dataset_loc,
+            row.split,
+            f"{row.product_name.replace("/", "_")}_{row.id}.jpg",  # 'product_name' might contain '/' character which would create a sub-directory
         ).resolve()
 
     def save_image(self, row: pd.Series) -> None:
