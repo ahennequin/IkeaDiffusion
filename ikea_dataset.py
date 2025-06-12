@@ -12,16 +12,19 @@ class IkeaDataset(Dataset):
 
     def __init__(
         self,
-        filepath: str,
-        dataset_loc: str,
+        filepath: str = "./scrapped_data.csv",
+        dataset_loc: str = "./dataset",
         train_data_ratio: float = 0.8,
+        download: bool = False,
     ):
         super().__init__()
         self.filepath = filepath
         self.dataset_loc = dataset_loc
         self.train_data_ratio = train_data_ratio
+        self.download = download
         # Integrate tqdm callbacks with pandas
         tqdm.pandas()
+        self.set_up_dataset()
 
     def resolve_image_path(self, row: pd.Series) -> Path:
         return Path(
@@ -67,12 +70,13 @@ class IkeaDataset(Dataset):
             "image_link"
         ].transform(lambda g: range(len(g)))
 
-        # For every row of data, download the image associated with 'image_link' and
-        # store it as : <dataset_loc>/<split>/<product_name>XXX.jpg where XXX are numbers to differentiate duplicates
-        self.data_df[["id", "product_name", "split", "image_link"]].progress_apply(
-            lambda row: self.save_image(row),
-            axis=1,  # Apply function for each row
-        )
+        if self.download:
+            # For every row of data, download the image associated with 'image_link' and
+            # store it as : <dataset_loc>/<split>/<product_name>XXX.jpg where XXX are numbers to differentiate duplicates
+            self.data_df[["id", "product_name", "split", "image_link"]].progress_apply(
+                lambda row: self.save_image(row),
+                axis=1,  # Apply function for each row
+            )
 
     def __getitem__(self, index):
         # Retrieve the index-th row from the dataframe
@@ -86,4 +90,4 @@ class IkeaDataset(Dataset):
 
 
 if __name__ == "__main__":
-    IkeaDataset("./scrapped_data.csv", "./dataset").set_up_dataset()
+    IkeaDataset("./scrapped_data.csv", "./dataset", download=True)
