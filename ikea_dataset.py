@@ -37,11 +37,14 @@ class IkeaDataset(Dataset):
         # Set up file location, and create parents folders if needed
         file_loc = self.resolve_image_path(row)
         file_loc.parent.mkdir(parents=True, exist_ok=True)
-        # Request the content of the 'image_link'
-        image_data = requests.get(row.image_link).content
-        # Save the image
-        with open(file_loc, "wb") as file:
-            file.write(image_data)
+        try:
+            # Request the content of the 'image_link'
+            image_data = requests.get(row.image_link).content
+            # Save the image
+            with open(file_loc, "wb") as file:
+                file.write(image_data)
+        except:
+            logger.warning(f"Error while retrieving image @ {row.image_link}")
 
     def load_image_from_path(self, path: Path) -> Image.Image:
         return Image.open(path)
