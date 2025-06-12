@@ -6,6 +6,7 @@ from random import random
 import requests
 from tqdm import tqdm
 from PIL import Image
+from loguru import logger
 
 
 class IkeaDataset(Dataset):
@@ -14,12 +15,14 @@ class IkeaDataset(Dataset):
         self,
         filepath: str = "./scrapped_data.csv",
         dataset_loc: str = "./dataset",
+        preprocess=None,
         train_data_ratio: float = 0.8,
         download: bool = False,
     ):
         super().__init__()
         self.filepath = filepath
         self.dataset_loc = dataset_loc
+        self.preprocess = preprocess
         self.train_data_ratio = train_data_ratio
         self.download = download
         # Integrate tqdm callbacks with pandas
@@ -83,10 +86,15 @@ class IkeaDataset(Dataset):
 
     def __getitem__(self, index):
         # Retrieve the index-th row from the dataframe
-        row = self.data_df[index, :]
+        row = self.data_df.loc[index, :]
         # Retrieve matching image
         image_path = self.resolve_image_path(row)
-        return row.product_name, self.load_image_from_path(image_path)
+        image = self.load_image_from_path(image_path)
+
+        if self.preprocess is not None:
+            image = self.preprocess(image)
+
+        return row.product_name, image
 
     def __len__(self):
         return len(self.data_df)
