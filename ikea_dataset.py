@@ -53,28 +53,37 @@ class IkeaDataset(Dataset):
         return Image.open(path)
 
     def set_up_dataset(self) -> None:
-        # Set up data directory, removing any existing data if necessary
+        # Set up data directory
         dataset_loc = Path(self.dataset_loc).resolve()
-        rmtree(dataset_loc, ignore_errors=True)
         dataset_loc.mkdir(parents=True, exist_ok=True)
 
-        # Load data, and create train/test splits based on 'product_name'
-        self.data_df = pd.read_csv(self.filepath)
-        split_df = (
-            self.data_df.groupby("product_name")
-            .apply(
-                lambda g: "train" if random() < self.train_data_ratio else "test",
-                include_groups=False,
-            )
-            .rename("split")
-        ).reset_index()
-        self.data_df = self.data_df.merge(
-            split_df, on="product_name", how="left", validate="m:1"
-        )
+        # Remove data only if we are going to download the dataset
+        if self.download:
+            rmtree(dataset_loc, ignore_errors=True)
 
-        self.data_df["id"] = self.data_df.groupby("product_name")[
-            "image_link"
-        ].transform(lambda g: range(len(g)))
+        # Load data
+        self.data_df = pd.read_csv(self.filepath)
+
+        # Create train/test splits based on 'product_name' only if the 'split' column doesn't already exist
+        if not "split" in self.data_df.columns:
+            split_df = (
+                self.data_df.groupby("product_name")
+                .apply(
+                    lambda g: "train" if random() < self.train_data_ratio else "test",
+                    include_groups=False,
+                )
+                .rename("split")
+            ).reset_index()
+            # Merge the 'split' with the original dataframe
+            self.data_df = self.data_df.merge(
+                split_df, on="product_name", how="left", validate="m:1"
+            )
+
+        # Create an id (if it does not exist already) to differentiate multiple rows of 'product_name'
+        if not "id" in self.data_df.columns:
+            self.data_df["id"] = self.data_df.groupby("product_name")[
+                "image_link"
+            ].transform(lambda g: range(len(g)))
 
         if self.download:
             # For every row of data, download the image associated with 'image_link' and
@@ -83,6 +92,9 @@ class IkeaDataset(Dataset):
                 lambda row: self.save_image(row),
                 axis=1,  # Apply function for each row
             )
+
+        # Save transformed dataset
+        self.data_df.to_csv(self.filepath, index=False)
 
     def __getitem__(self, index):
         # Retrieve the index-th row from the dataframe
