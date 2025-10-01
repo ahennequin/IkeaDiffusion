@@ -1,10 +1,43 @@
 from datetime import datetime
+import os
+from pathlib import Path
 from diffusers import DDIMScheduler, DDPMPipeline
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 from ikea_dataset import IkeaDataset
+from PIL import Image
+
+
+def make_grid(images, rows, cols):
+    w, h = images[0].size
+    grid = Image.new("RGB", size=(cols * w, rows * h))
+    for i, image in enumerate(images):
+        grid.paste(image, box=(i % cols * w, i // cols * h))
+    return grid
+
+
+def evaluate_model(
+    image_pipeline,
+    output_dir,
+    epoch,
+    eval_batch_size,
+    seed,
+) -> None:
+    # Sample some images from 'image_pipeline'
+    images = image_pipeline(
+        batch_size=eval_batch_size,
+        generator=torch.manual_seed(seed),
+    ).images
+
+    # Turn images to a grid
+    grid = make_grid(images, rows=4, cols=4)
+
+    # Save images
+    eval_dir = Path(output_dir, "eval")
+    os.makedirs(eval_dir, exist_ok=True)
+    grid.save(f"{eval_dir}/{epoch:04d}.png")
 
 
 def fine_tuning_routine(
@@ -13,13 +46,19 @@ def fine_tuning_routine(
     optimizer,
     device: torch.device,
     dataloader_params: dict,
-):
+) -> None:
     # Training params
     epochs = 10
-    grad_accumulation_steps = 2
+    grad_accumulation_steps = 8
+    output_dir = Path(
+        f"{datetime.now().strftime('%Y%m%d%H%M%S')}_finetuned_model"
+    ).absolute()
 
     # Load dataset
     train_data = DataLoader(dataset, **dataloader_params)
+
+    # Ensure model is in training mode
+    image_pipe.unet.train()
 
     losses = []
 
@@ -80,14 +119,23 @@ def fine_tuning_routine(
                 optimizer.step()
                 optimizer.zero_grad()
 
+        # Epoch end, after consuming the whole dataset
         print(
             f"Epoch {epoch} average loss: {sum(losses[-len(train_data):])/len(train_data)}"
         )
 
-        # Save fine-tuned pipeline
-        image_pipe.save_pretrained(
-            f"{datetime.now().strftime('%Y%m%d%H%M%S')}_finetuned_model"
+        # Every epoch, save some sample images
+        evaluate_model(
+            image_pipe,
+            output_dir,
+            epoch,
+            16,
+            0,
         )
+
+    # End of the training loop
+    # Save fine-tuned pipeline
+    image_pipe.save_pretrained(output_dir)
 
 
 if __name__ == "__main__":
